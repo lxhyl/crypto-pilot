@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useCallback, useEffect } from 'react';
+import { useMemo, useCallback } from 'react';
 import { MessageList } from './message-list';
 import { ChatInput } from './chat-input';
 import { useChat } from '@/hooks/use-chat';
@@ -14,7 +14,10 @@ interface ChatContainerProps {
 
 export function ChatContainer({ className, onOperationAdded }: ChatContainerProps) {
   const { messages, isLoading, sendMessage } = useChat();
-  const { execute, reject, hash, status: txStatus } = useTransaction();
+  const {
+    execute, retry, cancel, hash,
+    status: txStatus, displayStatus, errorMessage,
+  } = useTransaction();
 
   // Find the latest message with a transaction
   const activeTxMessage = useMemo(() => {
@@ -39,9 +42,13 @@ export function ChatContainer({ className, onOperationAdded }: ChatContainerProp
     });
   }, [activeTxMessage, execute, onOperationAdded]);
 
-  const handleReject = useCallback(() => {
-    reject();
-  }, [reject]);
+  const handleRetry = useCallback(() => {
+    retry();
+  }, [retry]);
+
+  const handleCancel = useCallback(() => {
+    cancel();
+  }, [cancel]);
 
   return (
     <div className={`flex flex-col ${className || ''}`}>
@@ -50,9 +57,12 @@ export function ChatContainer({ className, onOperationAdded }: ChatContainerProp
         isLoading={isLoading}
         onSendExample={sendMessage}
         onConfirmTx={handleConfirm}
-        onRejectTx={handleReject}
+        onRejectTx={handleCancel}
+        onRetryTx={handleRetry}
         txHash={hash}
         txStatus={txStatus}
+        txDisplayStatus={displayStatus}
+        txErrorMessage={errorMessage}
         activeTxMessageId={activeTxMessage?.id}
       />
       <ChatInput onSend={sendMessage} disabled={isLoading} />

@@ -3,21 +3,28 @@
 import { User, Bot } from 'lucide-react';
 import { TxPreviewCard } from '@/components/transaction/tx-preview-card';
 import type { ChatMessage } from '@/types';
+import type { TxStatus } from '@/hooks/use-transaction';
 
 interface MessageBubbleProps {
   message: ChatMessage;
   onConfirmTx?: () => void;
   onRejectTx?: () => void;
+  onRetryTx?: () => void;
   txHash?: string;
-  txStatus?: 'idle' | 'pending' | 'confirmed' | 'failed' | 'rejected';
+  txStatus?: TxStatus;
+  txDisplayStatus?: 'idle' | 'pending' | 'confirmed' | 'failed' | 'rejected';
+  txErrorMessage?: string | null;
 }
 
 export function MessageBubble({
   message,
   onConfirmTx,
   onRejectTx,
+  onRetryTx,
   txHash,
   txStatus = 'idle',
+  txDisplayStatus = 'idle',
+  txErrorMessage,
 }: MessageBubbleProps) {
   const isUser = message.role === 'user';
 
@@ -63,14 +70,17 @@ export function MessageBubble({
           </div>
 
           {/* Transaction preview */}
-          {message.transaction && onConfirmTx && onRejectTx && (
+          {message.transaction && onConfirmTx && onRejectTx && onRetryTx && (
             <div className="mt-2 text-left">
               <TxPreviewCard
                 transaction={message.transaction}
                 onConfirm={onConfirmTx}
                 onReject={onRejectTx}
+                onRetry={onRetryTx}
                 txHash={txHash}
                 status={txStatus}
+                displayStatus={txDisplayStatus}
+                errorMessage={txErrorMessage}
               />
             </div>
           )}

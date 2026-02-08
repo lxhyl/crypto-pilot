@@ -5,6 +5,7 @@ import { MessageBubble } from './message-bubble';
 import { ThinkingIndicator } from './thinking-indicator';
 import { ArrowRightLeft, PiggyBank, Send, Landmark } from 'lucide-react';
 import type { ChatMessage } from '@/types';
+import type { TxStatus } from '@/hooks/use-transaction';
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -12,8 +13,11 @@ interface MessageListProps {
   onSendExample?: (text: string) => void;
   onConfirmTx?: () => void;
   onRejectTx?: () => void;
+  onRetryTx?: () => void;
   txHash?: string;
-  txStatus?: 'idle' | 'pending' | 'confirmed' | 'failed' | 'rejected';
+  txStatus?: TxStatus;
+  txDisplayStatus?: 'idle' | 'pending' | 'confirmed' | 'failed' | 'rejected';
+  txErrorMessage?: string | null;
   activeTxMessageId?: string;
 }
 
@@ -58,8 +62,11 @@ export function MessageList({
   onSendExample,
   onConfirmTx,
   onRejectTx,
+  onRetryTx,
   txHash,
   txStatus,
+  txDisplayStatus,
+  txErrorMessage,
   activeTxMessageId,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -116,8 +123,11 @@ export function MessageList({
               message={msg}
               onConfirmTx={msg.id === activeTxMessageId ? onConfirmTx : undefined}
               onRejectTx={msg.id === activeTxMessageId ? onRejectTx : undefined}
+              onRetryTx={msg.id === activeTxMessageId ? onRetryTx : undefined}
               txHash={msg.id === activeTxMessageId ? txHash : undefined}
               txStatus={msg.id === activeTxMessageId ? txStatus : undefined}
+              txDisplayStatus={msg.id === activeTxMessageId ? txDisplayStatus : undefined}
+              txErrorMessage={msg.id === activeTxMessageId ? txErrorMessage : undefined}
             />
           </div>
         ))}
