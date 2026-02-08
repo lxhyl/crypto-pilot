@@ -1,9 +1,10 @@
-import { encodeFunctionData, parseUnits } from 'viem';
+import { encodeFunctionData, parseUnits, maxUint256 } from 'viem';
 import { uniswapV3RouterAbi } from '../abis/uniswap-v3-router';
 import { getContractAddress } from '../contracts';
 import { resolveSwapToken, isNativeETH } from '../tokens';
 import { shortenAddress } from '@/lib/utils';
-import type { PreparedTransaction } from '@/types';
+import { buildApproveStep } from './approve';
+import type { PreparedTransaction, TransactionStep } from '@/types';
 
 interface SwapParams {
   tokenIn: string;
@@ -23,8 +24,9 @@ export function generateSwapCalldata(
   const slippage = params.slippage ?? 0.5;
   const deadline = BigInt(Math.floor(Date.now() / 1000) + 1800);
   const routerAddress = getContractAddress('uniswapV3Router', chainId);
+  const sendNativeETH = isNativeETH(params.tokenIn);
 
-  const data = encodeFunctionData({
+  const swapData = encodeFunctionData({
     abi: uniswapV3RouterAbi,
     functionName: 'exactInputSingle',
     args: [
@@ -41,12 +43,25 @@ export function generateSwapCalldata(
     ],
   });
 
-  const sendNativeETH = isNativeETH(params.tokenIn);
+  const steps: TransactionStep[] = [];
+
+  // Step 1: Approve router to spend tokenIn (skip for native ETH)
+  if (!sendNativeETH) {
+    steps.push(
+      buildApproveStep(tokenIn.address, tokenIn.symbol, routerAddress, maxUint256, true),
+    );
+  }
+
+  // Step 2: Swap
+  steps.push({
+    to: routerAddress,
+    data: swapData,
+    value: sendNativeETH ? amountIn.toString() : '0',
+    label: `Swap ${params.amount} ${params.tokenIn.toUpperCase()} for ${params.tokenOut.toUpperCase()}`,
+  });
 
   return {
-    to: routerAddress,
-    data,
-    value: sendNativeETH ? amountIn.toString() : '0',
+    steps,
     chainId,
     humanReadable: {
       type: 'swap',
@@ -57,12 +72,10 @@ export function generateSwapCalldata(
         { label: 'Token Out', value: tokenOut.symbol },
         { label: 'Slippage', value: `${slippage}%` },
         { label: 'Fee Tier', value: '0.3%' },
-        { label: 'Router', value: shortenAddress(routerAddress) },
-        { label: 'Recipient', value: shortenAddress(userAddress) },
+        { label: 'Steps', value: steps.length === 1 ? '1 (swap)' : '2 (approve + swap)' },
       ],
       warnings: [
-        'amountOutMinimum is set to 0. In production, use a quote to set proper slippage protection.',
-        ...(sendNativeETH ? [`Sending ${params.amount} ETH as msg.value`] : []),
+        'amountOutMinimum is set to 0. Use a quote for production slippage protection.',
       ],
     },
   };

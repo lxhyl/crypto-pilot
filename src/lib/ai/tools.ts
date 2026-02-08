@@ -8,6 +8,7 @@ export interface ToolDefinition {
       description: string;
       enum?: string[];
       default?: unknown;
+      items?: { type: string };
     }>;
     required: string[];
   };
@@ -104,6 +105,52 @@ export const TOOL_DEFINITIONS: ToolDefinition[] = [
       required: ['token', 'amount'],
     },
   },
+  {
+    name: 'add_liquidity_v3',
+    description: 'Add liquidity to a Uniswap V3 pool. Creates a new NFT position with a full-range liquidity. Use when the user wants to provide liquidity, LP, or add to a pool on Uniswap V3.',
+    parameters: {
+      type: 'object',
+      properties: {
+        token0: { type: 'string', description: 'Symbol of the first token (e.g., "WETH", "USDC")' },
+        token1: { type: 'string', description: 'Symbol of the second token (e.g., "USDC", "DAI")' },
+        amount0: { type: 'string', description: 'Amount of token0 to provide in human-readable format' },
+        amount1: { type: 'string', description: 'Amount of token1 to provide in human-readable format' },
+        feeTier: { type: 'number', description: 'Pool fee tier: 500 (0.05%), 3000 (0.3%), or 10000 (1%). Default 3000.', default: 3000 },
+      },
+      required: ['token0', 'token1', 'amount0', 'amount1'],
+    },
+  },
+  {
+    name: 'add_liquidity_v4',
+    description: 'Add liquidity to a Uniswap V4 pool. Uses the V4 PositionManager with optional hooks. Use when the user specifically wants Uniswap V4 liquidity provision.',
+    parameters: {
+      type: 'object',
+      properties: {
+        token0: { type: 'string', description: 'Symbol of the first token' },
+        token1: { type: 'string', description: 'Symbol of the second token' },
+        amount0: { type: 'string', description: 'Amount of token0 to provide in human-readable format' },
+        amount1: { type: 'string', description: 'Amount of token1 to provide in human-readable format' },
+        feeTier: { type: 'number', description: 'Pool fee tier: 500, 3000, or 10000. Default 3000.', default: 3000 },
+        hookAddress: { type: 'string', description: 'Optional V4 hook contract address. Omit if no custom hook.' },
+      },
+      required: ['token0', 'token1', 'amount0', 'amount1'],
+    },
+  },
+  {
+    name: 'claim_merkle',
+    description: 'Claim tokens from a Merkle distributor contract (airdrops, reward claims). Use when the user wants to claim an airdrop, rewards, or tokens from a Merkle proof-based distribution.',
+    parameters: {
+      type: 'object',
+      properties: {
+        contractAddress: { type: 'string', description: 'The Merkle distributor contract address (0x...)' },
+        index: { type: 'string', description: 'The claim index number' },
+        amount: { type: 'string', description: 'The claim amount in raw wei/smallest unit' },
+        proof: { type: 'string', description: 'Comma-separated Merkle proof hashes (bytes32 values)' },
+        tokenSymbol: { type: 'string', description: 'Optional: symbol of the token being claimed for display' },
+      },
+      required: ['contractAddress', 'index', 'amount', 'proof'],
+    },
+  },
 ];
 
 // Convert to Anthropic tool format
@@ -138,6 +185,9 @@ export function toolNameToIntent(name: string): string {
     borrow_aave: 'borrow_aave',
     repay_aave: 'repay_aave',
     withdraw_aave: 'withdraw_aave',
+    add_liquidity_v3: 'add_liquidity_v3',
+    add_liquidity_v4: 'add_liquidity_v4',
+    claim_merkle: 'claim_merkle',
   };
   return map[name] || name;
 }

@@ -2,7 +2,7 @@ import { encodeFunctionData, parseUnits, maxUint256 } from 'viem';
 import { erc20Abi } from '../abis/erc20';
 import { resolveToken } from '../tokens';
 import { shortenAddress } from '@/lib/utils';
-import type { PreparedTransaction } from '@/types';
+import type { PreparedTransaction, TransactionStep } from '@/types';
 
 interface ApproveParams {
   token: string;
@@ -19,16 +19,10 @@ export function generateApproveCalldata(
   const isMax = !params.amount || params.amount === 'max' || params.amount === 'unlimited';
   const amount = isMax ? maxUint256 : parseUnits(params.amount!, token.decimals);
 
-  const data = encodeFunctionData({
-    abi: erc20Abi,
-    functionName: 'approve',
-    args: [spenderAddress, amount],
-  });
+  const step = buildApproveStep(token.address, token.symbol, spenderAddress, amount, isMax);
 
   return {
-    to: token.address,
-    data,
-    value: '0',
+    steps: [step],
     chainId,
     humanReadable: {
       type: 'approve',
@@ -43,5 +37,30 @@ export function generateApproveCalldata(
         ? ['Unlimited approval grants full access to your tokens for this contract.']
         : [],
     },
+  };
+}
+
+/**
+ * Build a single approve step. Reused by other generators
+ * to prepend approval when needed.
+ */
+export function buildApproveStep(
+  tokenAddress: `0x${string}`,
+  tokenSymbol: string,
+  spender: `0x${string}`,
+  amount: bigint,
+  isMax: boolean,
+): TransactionStep {
+  const data = encodeFunctionData({
+    abi: erc20Abi,
+    functionName: 'approve',
+    args: [spender, amount],
+  });
+
+  return {
+    to: tokenAddress,
+    data,
+    value: '0',
+    label: `Approve ${isMax ? '' : 'spending '}${tokenSymbol}${isMax ? '' : ''}`,
   };
 }

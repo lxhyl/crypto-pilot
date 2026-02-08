@@ -16,7 +16,7 @@ export function ChatContainer({ className, onOperationAdded }: ChatContainerProp
   const { messages, isLoading, sendMessage } = useChat();
   const {
     execute, retry, cancel, hash,
-    status: txStatus, displayStatus, errorMessage,
+    status: txStatus, displayStatus, errorMessage, stepProgress,
   } = useTransaction();
 
   // Find the latest message with a transaction
@@ -63,6 +63,7 @@ export function ChatContainer({ className, onOperationAdded }: ChatContainerProp
         txStatus={txStatus}
         txDisplayStatus={displayStatus}
         txErrorMessage={errorMessage}
+        txStepProgress={stepProgress}
         activeTxMessageId={activeTxMessage?.id}
       />
       <ChatInput onSend={sendMessage} disabled={isLoading} />

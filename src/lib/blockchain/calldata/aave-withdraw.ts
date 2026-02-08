@@ -3,7 +3,7 @@ import { aaveV3PoolAbi } from '../abis/aave-v3-pool';
 import { getContractAddress } from '../contracts';
 import { resolveToken } from '../tokens';
 import { shortenAddress } from '@/lib/utils';
-import type { PreparedTransaction } from '@/types';
+import type { PreparedTransaction, TransactionStep } from '@/types';
 
 interface AaveWithdrawParams {
   token: string;
@@ -19,16 +19,24 @@ export function generateAaveWithdrawCalldata(
   const amount = parseUnits(params.amount, token.decimals);
   const poolAddress = getContractAddress('aaveV3Pool', chainId);
 
-  const data = encodeFunctionData({
+  const withdrawData = encodeFunctionData({
     abi: aaveV3PoolAbi,
     functionName: 'withdraw',
     args: [token.address, amount, userAddress],
   });
 
+  // Withdraw does not require approval (you're withdrawing your own supplied collateral)
+  const steps: TransactionStep[] = [
+    {
+      to: poolAddress,
+      data: withdrawData,
+      value: '0',
+      label: `Withdraw ${params.amount} ${token.symbol} from Aave`,
+    },
+  ];
+
   return {
-    to: poolAddress,
-    data,
-    value: '0',
+    steps,
     chainId,
     humanReadable: {
       type: 'withdraw_aave',
@@ -39,6 +47,7 @@ export function generateAaveWithdrawCalldata(
         { label: 'Amount', value: `${params.amount} ${token.symbol}` },
         { label: 'Pool', value: shortenAddress(poolAddress) },
         { label: 'To', value: shortenAddress(userAddress) },
+        { label: 'Steps', value: '1 (withdraw)' },
       ],
       warnings: [],
     },

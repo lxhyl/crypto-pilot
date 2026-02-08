@@ -3,6 +3,7 @@
 import {
   AlertTriangle, Check, X, Loader2, ExternalLink, RotateCcw, Ban, XCircle,
   ArrowRightLeft, Send, ShieldCheck, PiggyBank, Landmark, Undo2, ArrowDownToLine,
+  Droplets, Gift,
 } from 'lucide-react';
 import { TxStatusBadge } from './tx-status-badge';
 import { CalldataDisplay } from './calldata-display';
@@ -10,35 +11,47 @@ import { getExplorerUrl } from '@/lib/utils';
 import type { PreparedTransaction } from '@/types';
 import type { TxStatus } from '@/hooks/use-transaction';
 
+interface StepProgress {
+  currentStep: number;
+  totalSteps: number;
+  currentLabel: string;
+  completedHashes: string[];
+}
+
 interface TxPreviewCardProps {
   transaction: PreparedTransaction;
   onConfirm: () => void;
-  onReject: () => void;  // Cancel entirely
-  onRetry: () => void;   // Reset to idle, show Sign & Send again
+  onReject: () => void;
+  onRetry: () => void;
   txHash?: string;
   status: TxStatus;
   displayStatus: 'idle' | 'pending' | 'confirmed' | 'failed' | 'rejected';
   errorMessage?: string | null;
+  stepProgress?: StepProgress | null;
 }
 
 const intentConfig: Record<string, { icon: React.ElementType; gradient: string; iconBg: string }> = {
-  swap:          { icon: ArrowRightLeft,  gradient: 'from-blue-500/5 to-cyan-500/5',     iconBg: 'bg-blue-500/10 text-blue-400 ring-blue-500/20' },
-  transfer:      { icon: Send,           gradient: 'from-amber-500/5 to-orange-500/5',  iconBg: 'bg-amber-500/10 text-amber-400 ring-amber-500/20' },
-  approve:       { icon: ShieldCheck,    gradient: 'from-cyan-500/5 to-teal-500/5',     iconBg: 'bg-cyan-500/10 text-cyan-400 ring-cyan-500/20' },
-  supply_aave:   { icon: PiggyBank,      gradient: 'from-emerald-500/5 to-green-500/5', iconBg: 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20' },
-  borrow_aave:   { icon: Landmark,       gradient: 'from-rose-500/5 to-pink-500/5',     iconBg: 'bg-rose-500/10 text-rose-400 ring-rose-500/20' },
-  repay_aave:    { icon: Undo2,          gradient: 'from-teal-500/5 to-emerald-500/5',  iconBg: 'bg-teal-500/10 text-teal-400 ring-teal-500/20' },
-  withdraw_aave: { icon: ArrowDownToLine, gradient: 'from-orange-500/5 to-amber-500/5', iconBg: 'bg-orange-500/10 text-orange-400 ring-orange-500/20' },
+  swap:            { icon: ArrowRightLeft,  gradient: 'from-blue-500/5 to-cyan-500/5',     iconBg: 'bg-blue-500/10 text-blue-400 ring-blue-500/20' },
+  transfer:        { icon: Send,           gradient: 'from-amber-500/5 to-orange-500/5',  iconBg: 'bg-amber-500/10 text-amber-400 ring-amber-500/20' },
+  approve:         { icon: ShieldCheck,    gradient: 'from-cyan-500/5 to-teal-500/5',     iconBg: 'bg-cyan-500/10 text-cyan-400 ring-cyan-500/20' },
+  supply_aave:     { icon: PiggyBank,      gradient: 'from-emerald-500/5 to-green-500/5', iconBg: 'bg-emerald-500/10 text-emerald-400 ring-emerald-500/20' },
+  borrow_aave:     { icon: Landmark,       gradient: 'from-rose-500/5 to-pink-500/5',     iconBg: 'bg-rose-500/10 text-rose-400 ring-rose-500/20' },
+  repay_aave:      { icon: Undo2,          gradient: 'from-teal-500/5 to-emerald-500/5',  iconBg: 'bg-teal-500/10 text-teal-400 ring-teal-500/20' },
+  withdraw_aave:   { icon: ArrowDownToLine, gradient: 'from-orange-500/5 to-amber-500/5', iconBg: 'bg-orange-500/10 text-orange-400 ring-orange-500/20' },
+  add_liquidity_v3:{ icon: Droplets,       gradient: 'from-purple-500/5 to-pink-500/5',   iconBg: 'bg-purple-500/10 text-purple-400 ring-purple-500/20' },
+  add_liquidity_v4:{ icon: Droplets,       gradient: 'from-indigo-500/5 to-violet-500/5', iconBg: 'bg-indigo-500/10 text-indigo-400 ring-indigo-500/20' },
+  claim_merkle:    { icon: Gift,           gradient: 'from-yellow-500/5 to-amber-500/5',  iconBg: 'bg-yellow-500/10 text-yellow-400 ring-yellow-500/20' },
 };
 
 export function TxPreviewCard({
-  transaction, onConfirm, onReject, onRetry, txHash, status, displayStatus, errorMessage,
+  transaction, onConfirm, onReject, onRetry, txHash, status, displayStatus, errorMessage, stepProgress,
 }: TxPreviewCardProps) {
   const { humanReadable } = transaction;
   const config = intentConfig[humanReadable.type] || intentConfig.swap;
   const Icon = config.icon;
+  const totalSteps = transaction.steps.length;
+  const isMultiStep = totalSteps > 1;
 
-  // Which action buttons to show
   const showSignButton = status === 'idle';
   const showSendingState = status === 'sending';
   const showConfirmingState = status === 'confirming';
@@ -77,7 +90,54 @@ export function TxPreviewCard({
           ))}
         </div>
 
-        {/* Protocol warnings (always visible) */}
+        {/* Multi-step progress indicator */}
+        {isMultiStep && stepProgress && (status === 'sending' || status === 'confirming' || status === 'confirmed') && (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-[11px] text-zinc-400">
+              <span className="font-medium">Progress</span>
+              <span className="text-zinc-600">
+                Step {stepProgress.currentStep + 1} of {stepProgress.totalSteps}
+              </span>
+            </div>
+            <div className="space-y-1">
+              {transaction.steps.map((step, i) => {
+                const isCompleted = status === 'confirmed'
+                  ? true
+                  : i < stepProgress.currentStep || (i === stepProgress.currentStep && status === 'confirming' && false);
+                const isActive = i === stepProgress.currentStep && status !== 'confirmed';
+                const isPending = i > stepProgress.currentStep && status !== 'confirmed';
+                const stepDone = stepProgress.completedHashes[i] !== undefined;
+
+                return (
+                  <div key={i} className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-[11px] ${
+                    stepDone || (status === 'confirmed')
+                      ? 'bg-emerald-500/5 border border-emerald-500/10'
+                      : isActive
+                        ? 'bg-violet-500/5 border border-violet-500/10'
+                        : 'bg-black/10 border border-transparent'
+                  }`}>
+                    {stepDone || status === 'confirmed' ? (
+                      <Check className="w-3 h-3 text-emerald-400 flex-shrink-0" />
+                    ) : isActive ? (
+                      <Loader2 className="w-3 h-3 text-violet-400 animate-spin flex-shrink-0" />
+                    ) : (
+                      <div className="w-3 h-3 rounded-full border border-zinc-700 flex-shrink-0" />
+                    )}
+                    <span className={
+                      stepDone || status === 'confirmed'
+                        ? 'text-emerald-300'
+                        : isActive ? 'text-violet-300' : 'text-zinc-600'
+                    }>
+                      {step.label}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Protocol warnings */}
         {humanReadable.warnings.length > 0 && (
           <div className="space-y-1.5">
             {humanReadable.warnings.map((warning, i) => (
@@ -89,7 +149,7 @@ export function TxPreviewCard({
           </div>
         )}
 
-        {/* Error message (wallet rejection, send error, chain revert) */}
+        {/* Error message */}
         {errorMessage && (
           <div className="flex items-start gap-2.5 text-[12px] bg-red-500/5 border border-red-500/15 p-3 rounded-xl animate-fade-in" role="alert">
             {status === 'wallet_rejected' ? (
@@ -104,11 +164,10 @@ export function TxPreviewCard({
         )}
 
         {/* Calldata */}
-        <CalldataDisplay data={transaction.data} to={transaction.to} value={transaction.value} />
+        <CalldataDisplay steps={transaction.steps} />
 
         {/* ── Action buttons (state machine) ── */}
 
-        {/* State: idle → Show Sign & Send + Cancel */}
         {showSignButton && (
           <div className="flex gap-2 pt-1">
             <button
@@ -116,7 +175,7 @@ export function TxPreviewCard({
               className="flex-1 flex items-center justify-center gap-2 h-10 bg-white text-zinc-900 text-[13px] font-semibold rounded-xl hover:bg-zinc-100 transition-all duration-200 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-900"
             >
               <Check className="w-3.5 h-3.5" aria-hidden="true" />
-              Sign & Send
+              {isMultiStep ? `Sign & Send (${totalSteps} steps)` : 'Sign & Send'}
             </button>
             <button
               onClick={onReject}
@@ -128,27 +187,30 @@ export function TxPreviewCard({
           </div>
         )}
 
-        {/* State: sending → Waiting for wallet */}
         {showSendingState && (
           <div className="flex gap-2 pt-1">
             <div className="flex-1 flex items-center justify-center gap-2 h-10 bg-zinc-800 text-zinc-300 text-[13px] font-medium rounded-xl" role="status">
               <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
-              Confirm in wallet&hellip;
+              {isMultiStep && stepProgress
+                ? `Step ${stepProgress.currentStep + 1}/${stepProgress.totalSteps}: Confirm in wallet\u2026`
+                : 'Confirm in wallet\u2026'
+              }
             </div>
           </div>
         )}
 
-        {/* State: confirming → Waiting for chain receipt */}
         {showConfirmingState && (
           <div className="flex gap-2 pt-1">
             <div className="flex-1 flex items-center justify-center gap-2 h-10 bg-zinc-800 text-zinc-300 text-[13px] font-medium rounded-xl" role="status">
               <Loader2 className="w-3.5 h-3.5 animate-spin" aria-hidden="true" />
-              Waiting for confirmation&hellip;
+              {isMultiStep && stepProgress
+                ? `Step ${stepProgress.currentStep + 1}/${stepProgress.totalSteps}: Waiting for confirmation\u2026`
+                : 'Waiting for confirmation\u2026'
+              }
             </div>
           </div>
         )}
 
-        {/* State: error (rejected / send_error / chain_failed) → Retry + Cancel */}
         {showRetryButton && (
           <div className="flex gap-2 pt-1 animate-fade-in">
             <button
@@ -170,7 +232,7 @@ export function TxPreviewCard({
           </div>
         )}
 
-        {/* Tx Hash (visible when confirming, confirmed, or chain_failed) */}
+        {/* Tx Hash */}
         {txHash && (
           <a
             href={getExplorerUrl(transaction.chainId, txHash)}

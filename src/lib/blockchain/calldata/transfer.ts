@@ -2,7 +2,7 @@ import { encodeFunctionData, parseUnits } from 'viem';
 import { erc20Abi } from '../abis/erc20';
 import { resolveToken, isNativeETH } from '../tokens';
 import { shortenAddress } from '@/lib/utils';
-import type { PreparedTransaction } from '@/types';
+import type { PreparedTransaction, TransactionStep } from '@/types';
 
 interface TransferParams {
   token: string;
@@ -19,10 +19,14 @@ export function generateTransferCalldata(
   // Native ETH transfer
   if (isNativeETH(params.token)) {
     const amount = parseUnits(params.amount, 18);
-    return {
+    const step: TransactionStep = {
       to: toAddress,
       data: '0x',
       value: amount.toString(),
+      label: `Transfer ${params.amount} ETH`,
+    };
+    return {
+      steps: [step],
       chainId,
       humanReadable: {
         type: 'transfer',
@@ -37,7 +41,7 @@ export function generateTransferCalldata(
     };
   }
 
-  // ERC20 transfer
+  // ERC20 transfer (no approval needed, you own the tokens)
   const token = resolveToken(params.token, chainId);
   const amount = parseUnits(params.amount, token.decimals);
 
@@ -47,10 +51,15 @@ export function generateTransferCalldata(
     args: [toAddress, amount],
   });
 
-  return {
+  const step: TransactionStep = {
     to: token.address,
     data,
     value: '0',
+    label: `Transfer ${params.amount} ${token.symbol}`,
+  };
+
+  return {
+    steps: [step],
     chainId,
     humanReadable: {
       type: 'transfer',

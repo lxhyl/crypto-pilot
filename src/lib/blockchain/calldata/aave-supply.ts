@@ -1,9 +1,10 @@
-import { encodeFunctionData, parseUnits } from 'viem';
+import { encodeFunctionData, parseUnits, maxUint256 } from 'viem';
 import { aaveV3PoolAbi } from '../abis/aave-v3-pool';
 import { getContractAddress } from '../contracts';
 import { resolveToken } from '../tokens';
 import { shortenAddress } from '@/lib/utils';
-import type { PreparedTransaction } from '@/types';
+import { buildApproveStep } from './approve';
+import type { PreparedTransaction, TransactionStep } from '@/types';
 
 interface AaveSupplyParams {
   token: string;
@@ -19,16 +20,26 @@ export function generateAaveSupplyCalldata(
   const amount = parseUnits(params.amount, token.decimals);
   const poolAddress = getContractAddress('aaveV3Pool', chainId);
 
-  const data = encodeFunctionData({
+  const supplyData = encodeFunctionData({
     abi: aaveV3PoolAbi,
     functionName: 'supply',
     args: [token.address, amount, userAddress, 0],
   });
 
+  const steps: TransactionStep[] = [
+    // Step 1: Approve Aave Pool to spend tokens
+    buildApproveStep(token.address, token.symbol, poolAddress, maxUint256, true),
+    // Step 2: Supply to Aave
+    {
+      to: poolAddress,
+      data: supplyData,
+      value: '0',
+      label: `Supply ${params.amount} ${token.symbol} to Aave`,
+    },
+  ];
+
   return {
-    to: poolAddress,
-    data,
-    value: '0',
+    steps,
     chainId,
     humanReadable: {
       type: 'supply_aave',
@@ -38,11 +49,9 @@ export function generateAaveSupplyCalldata(
         { label: 'Token', value: `${token.symbol} (${shortenAddress(token.address)})` },
         { label: 'Amount', value: `${params.amount} ${token.symbol}` },
         { label: 'Pool', value: shortenAddress(poolAddress) },
-        { label: 'On Behalf Of', value: shortenAddress(userAddress) },
+        { label: 'Steps', value: '2 (approve + supply)' },
       ],
-      warnings: [
-        'Ensure you have approved the Aave Pool to spend your tokens before supplying.',
-      ],
+      warnings: [],
     },
   };
 }

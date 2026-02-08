@@ -14,6 +14,7 @@ interface MessageBubbleProps {
   txStatus?: TxStatus;
   txDisplayStatus?: 'idle' | 'pending' | 'confirmed' | 'failed' | 'rejected';
   txErrorMessage?: string | null;
+  txStepProgress?: { currentStep: number; totalSteps: number; currentLabel: string; completedHashes: string[] } | null;
 }
 
 export function MessageBubble({
@@ -25,6 +26,7 @@ export function MessageBubble({
   txStatus = 'idle',
   txDisplayStatus = 'idle',
   txErrorMessage,
+  txStepProgress,
 }: MessageBubbleProps) {
   const isUser = message.role === 'user';
 
@@ -81,6 +83,7 @@ export function MessageBubble({
                 status={txStatus}
                 displayStatus={txDisplayStatus}
                 errorMessage={txErrorMessage}
+                stepProgress={txStepProgress}
               />
             </div>
           )}

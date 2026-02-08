@@ -3,7 +3,7 @@ import { aaveV3PoolAbi } from '../abis/aave-v3-pool';
 import { getContractAddress } from '../contracts';
 import { resolveToken } from '../tokens';
 import { shortenAddress } from '@/lib/utils';
-import type { PreparedTransaction } from '@/types';
+import type { PreparedTransaction, TransactionStep } from '@/types';
 
 interface AaveBorrowParams {
   token: string;
@@ -21,16 +21,24 @@ export function generateAaveBorrowCalldata(
   const poolAddress = getContractAddress('aaveV3Pool', chainId);
   const rateMode = BigInt(params.interestRateMode ?? 2); // default variable
 
-  const data = encodeFunctionData({
+  const borrowData = encodeFunctionData({
     abi: aaveV3PoolAbi,
     functionName: 'borrow',
     args: [token.address, amount, rateMode, 0, userAddress],
   });
 
+  // Borrow does not require approval (you're receiving tokens, not spending them)
+  const steps: TransactionStep[] = [
+    {
+      to: poolAddress,
+      data: borrowData,
+      value: '0',
+      label: `Borrow ${params.amount} ${token.symbol} from Aave`,
+    },
+  ];
+
   return {
-    to: poolAddress,
-    data,
-    value: '0',
+    steps,
     chainId,
     humanReadable: {
       type: 'borrow_aave',
@@ -41,6 +49,7 @@ export function generateAaveBorrowCalldata(
         { label: 'Amount', value: `${params.amount} ${token.symbol}` },
         { label: 'Rate Mode', value: rateMode === 1n ? 'Stable' : 'Variable' },
         { label: 'Pool', value: shortenAddress(poolAddress) },
+        { label: 'Steps', value: '1 (borrow)' },
       ],
       warnings: [
         'Ensure you have sufficient collateral deposited before borrowing.',

@@ -1,13 +1,13 @@
 'use client';
 
-import { useSendTransaction, useWaitForTransactionReceipt } from 'wagmi';
-import { useCallback, useEffect, useState, useRef } from 'react';
-import type { PreparedTransaction } from '@/types';
+import { useWalletClient, usePublicClient } from 'wagmi';
+import { useCallback, useState, useRef } from 'react';
+import type { PreparedTransaction, TransactionStep } from '@/types';
 
 /**
  * Transaction lifecycle states:
  *
- *   idle ──→ sending ──→ confirming ──→ confirmed
+ *   idle ──→ sending ──→ confirming ──→ (next step or confirmed)
  *               │             │
  *               ▼             ▼
  *           wallet_rejected  chain_failed
@@ -22,97 +22,129 @@ export type TxStatus =
   | 'idle'            // Ready to sign, show Sign & Send
   | 'sending'         // Wallet popup is open, waiting for user to sign
   | 'confirming'      // Signed, submitted to chain, waiting for receipt
-  | 'confirmed'       // Receipt received, transaction succeeded
+  | 'confirmed'       // All steps completed successfully
   | 'wallet_rejected' // User rejected in wallet
-  | 'send_error'      // Wallet/RPC error during send (gas estimation, insufficient funds, etc.)
+  | 'send_error'      // Wallet/RPC error during send
   | 'chain_failed'    // Transaction reverted on-chain
   | 'cancelled';      // User clicked cancel in our UI
 
-export function useTransaction() {
-  const {
-    sendTransaction,
-    data: hash,
-    isPending: isSendPending,
-    error: sendError,
-    reset: resetSend,
-  } = useSendTransaction();
+interface StepProgress {
+  currentStep: number;  // 0-indexed
+  totalSteps: number;
+  currentLabel: string;
+  completedHashes: string[];
+}
 
-  const {
-    isLoading: isReceiptLoading,
-    isSuccess: isReceiptSuccess,
-    isError: isReceiptError,
-    error: receiptError,
-  } = useWaitForTransactionReceipt({ hash });
+export function useTransaction() {
+  const { data: walletClient } = useWalletClient();
+  const publicClient = usePublicClient();
 
   const [status, setStatus] = useState<TxStatus>('idle');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [hash, setHash] = useState<`0x${string}` | undefined>();
+  const [stepProgress, setStepProgress] = useState<StepProgress | null>(null);
   const lastTxRef = useRef<PreparedTransaction | null>(null);
-
-  // Derive status from wagmi states
-  useEffect(() => {
-    if (isSendPending) {
-      setStatus('sending');
-      setErrorMessage(null);
-      return;
-    }
-
-    if (sendError) {
-      const msg = parseSendError(sendError);
-      setErrorMessage(msg.message);
-      setStatus(msg.isUserRejection ? 'wallet_rejected' : 'send_error');
-      return;
-    }
-
-    if (hash && isReceiptLoading) {
-      setStatus('confirming');
-      setErrorMessage(null);
-      return;
-    }
-
-    if (hash && isReceiptSuccess) {
-      setStatus('confirmed');
-      setErrorMessage(null);
-      return;
-    }
-
-    if (hash && isReceiptError) {
-      setStatus('chain_failed');
-      setErrorMessage(receiptError?.message ? parseChainError(receiptError.message) : 'Transaction reverted on-chain.');
-      return;
-    }
-  }, [isSendPending, sendError, hash, isReceiptLoading, isReceiptSuccess, isReceiptError, receiptError]);
+  const abortRef = useRef(false);
 
   const execute = useCallback(
-    (tx: PreparedTransaction) => {
+    async (tx: PreparedTransaction) => {
+      if (!walletClient || !publicClient) {
+        setErrorMessage('Wallet not connected. Please connect your wallet first.');
+        setStatus('send_error');
+        return;
+      }
+
       lastTxRef.current = tx;
-      setStatus('sending');
+      abortRef.current = false;
       setErrorMessage(null);
-      resetSend(); // Clear any previous error state in wagmi
-      sendTransaction({
-        to: tx.to as `0x${string}`,
-        data: tx.data as `0x${string}`,
-        value: BigInt(tx.value),
-        chainId: tx.chainId,
+      setHash(undefined);
+
+      const steps = tx.steps;
+      const completedHashes: string[] = [];
+
+      for (let i = 0; i < steps.length; i++) {
+        if (abortRef.current) {
+          setStatus('cancelled');
+          return;
+        }
+
+        const step = steps[i];
+        setStepProgress({
+          currentStep: i,
+          totalSteps: steps.length,
+          currentLabel: step.label,
+          completedHashes: [...completedHashes],
+        });
+
+        // Step: sending
+        setStatus('sending');
+
+        let txHash: `0x${string}`;
+        try {
+          txHash = await walletClient.sendTransaction({
+            to: step.to as `0x${string}`,
+            data: (step.data || '0x') as `0x${string}`,
+            value: BigInt(step.value || '0'),
+            chain: undefined, // use wallet's current chain
+          });
+        } catch (err) {
+          const parsed = parseSendError(err as Error);
+          setErrorMessage(parsed.message);
+          setStatus(parsed.isUserRejection ? 'wallet_rejected' : 'send_error');
+          return;
+        }
+
+        setHash(txHash);
+        completedHashes.push(txHash);
+
+        // Step: confirming
+        setStatus('confirming');
+        setStepProgress({
+          currentStep: i,
+          totalSteps: steps.length,
+          currentLabel: step.label,
+          completedHashes: [...completedHashes],
+        });
+
+        try {
+          const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
+          if (receipt.status === 'reverted') {
+            setErrorMessage(`Step ${i + 1}/${steps.length} reverted on-chain: "${step.label}"`);
+            setStatus('chain_failed');
+            return;
+          }
+        } catch (err) {
+          setErrorMessage(parseChainError((err as Error).message));
+          setStatus('chain_failed');
+          return;
+        }
+      }
+
+      // All steps completed
+      setStepProgress({
+        currentStep: steps.length - 1,
+        totalSteps: steps.length,
+        currentLabel: 'All steps completed',
+        completedHashes,
       });
+      setStatus('confirmed');
     },
-    [sendTransaction, resetSend],
+    [walletClient, publicClient],
   );
 
-  // Retry: reset state back to idle so user can click Sign & Send again
   const retry = useCallback(() => {
     setStatus('idle');
     setErrorMessage(null);
-    resetSend();
-  }, [resetSend]);
+    setHash(undefined);
+    setStepProgress(null);
+  }, []);
 
-  // Cancel: user doesn't want this transaction anymore
   const cancel = useCallback(() => {
+    abortRef.current = true;
     setStatus('cancelled');
     setErrorMessage(null);
-    resetSend();
-  }, [resetSend]);
+  }, []);
 
-  // Map our detailed status to the simpler display status for TxStatusBadge
   const displayStatus = mapToDisplayStatus(status);
 
   return {
@@ -123,6 +155,7 @@ export function useTransaction() {
     status,
     displayStatus,
     errorMessage,
+    stepProgress,
     lastTransaction: lastTxRef.current,
   };
 }
@@ -133,7 +166,6 @@ function parseSendError(error: Error): { message: string; isUserRejection: boole
   const msg = error.message || String(error);
   const msgLower = msg.toLowerCase();
 
-  // User rejected in wallet
   if (
     msgLower.includes('user rejected') ||
     msgLower.includes('user denied') ||
@@ -146,7 +178,6 @@ function parseSendError(error: Error): { message: string; isUserRejection: boole
     return { message: 'You rejected the transaction in your wallet.', isUserRejection: true };
   }
 
-  // Insufficient funds
   if (
     msgLower.includes('insufficient funds') ||
     msgLower.includes('insufficient balance') ||
@@ -155,7 +186,6 @@ function parseSendError(error: Error): { message: string; isUserRejection: boole
     return { message: 'Insufficient balance to complete this transaction (including gas fees).', isUserRejection: false };
   }
 
-  // Gas estimation failed (simulation revert)
   if (
     msgLower.includes('gas required exceeds') ||
     msgLower.includes('execution reverted') ||
@@ -163,7 +193,6 @@ function parseSendError(error: Error): { message: string; isUserRejection: boole
     msgLower.includes('call revert') ||
     msgLower.includes('unpredictable_gas_limit')
   ) {
-    // Try to extract the revert reason
     const revertMatch = msg.match(/reason:\s*(.+?)(?:\n|$)/i) ||
                         msg.match(/reverted with reason string '(.+?)'/i) ||
                         msg.match(/execution reverted:\s*(.+?)(?:\n|$)/i);
@@ -176,12 +205,10 @@ function parseSendError(error: Error): { message: string; isUserRejection: boole
     };
   }
 
-  // Nonce issues
   if (msgLower.includes('nonce')) {
     return { message: 'Nonce conflict. You may have a pending transaction. Try resetting your wallet activity.', isUserRejection: false };
   }
 
-  // Network / RPC errors
   if (
     msgLower.includes('network') ||
     msgLower.includes('timeout') ||
@@ -191,12 +218,10 @@ function parseSendError(error: Error): { message: string; isUserRejection: boole
     return { message: 'Network error. Check your internet connection and try again.', isUserRejection: false };
   }
 
-  // Chain not supported or wrong chain
   if (msgLower.includes('chain') && (msgLower.includes('unsupported') || msgLower.includes('mismatch'))) {
     return { message: 'Please switch to the correct network in your wallet.', isUserRejection: false };
   }
 
-  // Fallback: truncate long error messages
   const truncated = msg.length > 150 ? msg.slice(0, 150) + '\u2026' : msg;
   return { message: `Transaction failed: ${truncated}`, isUserRejection: false };
 }

@@ -6,6 +6,9 @@ import { generateAaveSupplyCalldata } from './aave-supply';
 import { generateAaveBorrowCalldata } from './aave-borrow';
 import { generateAaveRepayCalldata } from './aave-repay';
 import { generateAaveWithdrawCalldata } from './aave-withdraw';
+import { generateAddLiquidityV3Calldata } from './uniswap-v3-lp';
+import { generateAddLiquidityV4Calldata } from './uniswap-v4-lp';
+import { generateClaimMerkleCalldata } from './claim-merkle';
 
 export function generateCalldata(
   intent: IntentType,
@@ -51,6 +54,24 @@ export function generateCalldata(
     case 'withdraw_aave':
       return generateAaveWithdrawCalldata(
         params as { token: string; amount: string },
+        chainId,
+        userAddress,
+      );
+    case 'add_liquidity_v3':
+      return generateAddLiquidityV3Calldata(
+        params as { token0: string; token1: string; amount0: string; amount1: string; feeTier?: number },
+        chainId,
+        userAddress,
+      );
+    case 'add_liquidity_v4':
+      return generateAddLiquidityV4Calldata(
+        params as { token0: string; token1: string; amount0: string; amount1: string; feeTier?: number; hookAddress?: string },
+        chainId,
+        userAddress,
+      );
+    case 'claim_merkle':
+      return generateClaimMerkleCalldata(
+        params as { contractAddress: string; index: string; amount: string; proof: string[]; tokenSymbol?: string },
         chainId,
         userAddress,
       );

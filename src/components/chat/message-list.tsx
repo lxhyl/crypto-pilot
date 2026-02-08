@@ -3,7 +3,7 @@
 import { useEffect, useRef } from 'react';
 import { MessageBubble } from './message-bubble';
 import { ThinkingIndicator } from './thinking-indicator';
-import { ArrowRightLeft, PiggyBank, Send, Landmark } from 'lucide-react';
+import { ArrowRightLeft, PiggyBank, Send, Landmark, Droplets, Gift } from 'lucide-react';
 import type { ChatMessage } from '@/types';
 import type { TxStatus } from '@/hooks/use-transaction';
 
@@ -18,6 +18,7 @@ interface MessageListProps {
   txStatus?: TxStatus;
   txDisplayStatus?: 'idle' | 'pending' | 'confirmed' | 'failed' | 'rejected';
   txErrorMessage?: string | null;
+  txStepProgress?: { currentStep: number; totalSteps: number; currentLabel: string; completedHashes: string[] } | null;
   activeTxMessageId?: string;
 }
 
@@ -54,6 +55,22 @@ const EXAMPLES = [
     iconColor: 'text-rose-400',
     border: 'hover:border-rose-500/20',
   },
+  {
+    icon: Droplets,
+    text: 'Add WETH/USDC liquidity on V3',
+    sub: 'Uniswap V3 LP',
+    gradient: 'from-purple-500/10 to-pink-500/10',
+    iconColor: 'text-purple-400',
+    border: 'hover:border-purple-500/20',
+  },
+  {
+    icon: Gift,
+    text: 'Claim airdrop from Merkle',
+    sub: 'Merkle Distributor',
+    gradient: 'from-yellow-500/10 to-amber-500/10',
+    iconColor: 'text-yellow-400',
+    border: 'hover:border-yellow-500/20',
+  },
 ];
 
 export function MessageList({
@@ -67,6 +84,7 @@ export function MessageList({
   txStatus,
   txDisplayStatus,
   txErrorMessage,
+  txStepProgress,
   activeTxMessageId,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
@@ -128,6 +146,7 @@ export function MessageList({
               txStatus={msg.id === activeTxMessageId ? txStatus : undefined}
               txDisplayStatus={msg.id === activeTxMessageId ? txDisplayStatus : undefined}
               txErrorMessage={msg.id === activeTxMessageId ? txErrorMessage : undefined}
+              txStepProgress={msg.id === activeTxMessageId ? txStepProgress : undefined}
             />
           </div>
         ))}

@@ -5,7 +5,10 @@ export type IntentType =
   | 'supply_aave'
   | 'borrow_aave'
   | 'repay_aave'
-  | 'withdraw_aave';
+  | 'withdraw_aave'
+  | 'add_liquidity_v3'
+  | 'add_liquidity_v4'
+  | 'claim_merkle';
 
 export interface ToolCallResult {
   intent: IntentType;
@@ -21,10 +24,24 @@ export interface ChatMessage {
   timestamp: number;
 }
 
-export interface PreparedTransaction {
+/**
+ * A single on-chain call.
+ * A PreparedTransaction may contain multiple steps (e.g. approve + supply).
+ */
+export interface TransactionStep {
   to: string;
   data: string;
-  value: string; // bigint as string for serialization
+  value: string;
+  label: string; // e.g. "Approve USDC for Aave Pool"
+}
+
+/**
+ * A prepared multi-step transaction.
+ * Each step is a separate on-chain tx sent sequentially.
+ * The user clicks "Sign & Send" once, and we auto-execute all steps.
+ */
+export interface PreparedTransaction {
+  steps: TransactionStep[];
   chainId: number;
   humanReadable: HumanReadableOperation;
 }
