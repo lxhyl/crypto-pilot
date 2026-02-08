@@ -33,6 +33,16 @@ export interface TransactionStep {
   data: string;
   value: string;
   label: string; // e.g. "Approve USDC for Aave Pool"
+  /**
+   * If present, this step is an ERC20 approve.
+   * The transaction hook will check on-chain allowance first
+   * and skip this step if the user already has sufficient approval.
+   */
+  approveCheck?: {
+    token: `0x${string}`;
+    spender: `0x${string}`;
+    minAmount: string; // bigint as string
+  };
 }
 
 /**

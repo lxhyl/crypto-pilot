@@ -28,7 +28,7 @@ export function generateAaveSupplyCalldata(
 
   const steps: TransactionStep[] = [
     // Step 1: Approve Aave Pool to spend tokens
-    buildApproveStep(token.address, token.symbol, poolAddress, maxUint256, true),
+    buildApproveStep(token.address, token.symbol, poolAddress, maxUint256, true, amount),
     // Step 2: Supply to Aave
     {
       to: poolAddress,

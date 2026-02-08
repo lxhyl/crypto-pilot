@@ -2,6 +2,7 @@
 
 import { useWalletClient, usePublicClient } from 'wagmi';
 import { useCallback, useState, useRef } from 'react';
+import { erc20Abi } from '@/lib/blockchain/abis/erc20';
 import type { PreparedTransaction, TransactionStep } from '@/types';
 
 /**
@@ -29,8 +30,8 @@ export type TxStatus =
   | 'cancelled';      // User clicked cancel in our UI
 
 interface StepProgress {
-  currentStep: number;  // 0-indexed
-  totalSteps: number;
+  currentStep: number;  // 0-indexed (among executed steps, not all steps)
+  totalSteps: number;   // total steps that will actually execute
   currentLabel: string;
   completedHashes: string[];
 }
@@ -59,19 +60,43 @@ export function useTransaction() {
       setErrorMessage(null);
       setHash(undefined);
 
-      const steps = tx.steps;
+      const userAddress = walletClient.account.address;
+
+      // Filter steps: check allowance for approve steps, skip if already sufficient
+      const stepsToExecute: TransactionStep[] = [];
+      for (const step of tx.steps) {
+        if (step.approveCheck) {
+          const { token, spender, minAmount } = step.approveCheck;
+          try {
+            const currentAllowance = await publicClient.readContract({
+              address: token,
+              abi: erc20Abi,
+              functionName: 'allowance',
+              args: [userAddress, spender],
+            });
+            if (currentAllowance >= BigInt(minAmount)) {
+              // Already approved, skip this step
+              continue;
+            }
+          } catch {
+            // Can't check allowance (e.g. network error), include the step to be safe
+          }
+        }
+        stepsToExecute.push(step);
+      }
+
       const completedHashes: string[] = [];
 
-      for (let i = 0; i < steps.length; i++) {
+      for (let i = 0; i < stepsToExecute.length; i++) {
         if (abortRef.current) {
           setStatus('cancelled');
           return;
         }
 
-        const step = steps[i];
+        const step = stepsToExecute[i];
         setStepProgress({
           currentStep: i,
-          totalSteps: steps.length,
+          totalSteps: stepsToExecute.length,
           currentLabel: step.label,
           completedHashes: [...completedHashes],
         });
@@ -85,7 +110,7 @@ export function useTransaction() {
             to: step.to as `0x${string}`,
             data: (step.data || '0x') as `0x${string}`,
             value: BigInt(step.value || '0'),
-            chain: undefined, // use wallet's current chain
+            chain: undefined,
           });
         } catch (err) {
           const parsed = parseSendError(err as Error);
@@ -101,7 +126,7 @@ export function useTransaction() {
         setStatus('confirming');
         setStepProgress({
           currentStep: i,
-          totalSteps: steps.length,
+          totalSteps: stepsToExecute.length,
           currentLabel: step.label,
           completedHashes: [...completedHashes],
         });
@@ -109,7 +134,7 @@ export function useTransaction() {
         try {
           const receipt = await publicClient.waitForTransactionReceipt({ hash: txHash });
           if (receipt.status === 'reverted') {
-            setErrorMessage(`Step ${i + 1}/${steps.length} reverted on-chain: "${step.label}"`);
+            setErrorMessage(`Step ${i + 1}/${stepsToExecute.length} reverted on-chain: "${step.label}"`);
             setStatus('chain_failed');
             return;
           }
@@ -122,8 +147,8 @@ export function useTransaction() {
 
       // All steps completed
       setStepProgress({
-        currentStep: steps.length - 1,
-        totalSteps: steps.length,
+        currentStep: stepsToExecute.length - 1,
+        totalSteps: stepsToExecute.length,
         currentLabel: 'All steps completed',
         completedHashes,
       });

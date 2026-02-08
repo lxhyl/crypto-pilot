@@ -48,7 +48,7 @@ export function generateSwapCalldata(
   // Step 1: Approve router to spend tokenIn (skip for native ETH)
   if (!sendNativeETH) {
     steps.push(
-      buildApproveStep(tokenIn.address, tokenIn.symbol, routerAddress, maxUint256, true),
+      buildApproveStep(tokenIn.address, tokenIn.symbol, routerAddress, maxUint256, true, amountIn),
     );
   }
 

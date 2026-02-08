@@ -108,8 +108,8 @@ export function generateAddLiquidityV4Calldata(
   });
 
   const steps: TransactionStep[] = [
-    buildApproveStep(token0.address, token0.symbol, positionManager, maxUint256, true),
-    buildApproveStep(token1.address, token1.symbol, positionManager, maxUint256, true),
+    buildApproveStep(token0.address, token0.symbol, positionManager, maxUint256, true, amount0),
+    buildApproveStep(token1.address, token1.symbol, positionManager, maxUint256, true, amount1),
     {
       to: positionManager,
       data: modifyData,

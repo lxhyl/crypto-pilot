@@ -76,8 +76,8 @@ export function generateAddLiquidityV3Calldata(
   });
 
   const steps: TransactionStep[] = [
-    buildApproveStep(token0.address, token0.symbol, nftManagerAddress, maxUint256, true),
-    buildApproveStep(token1.address, token1.symbol, nftManagerAddress, maxUint256, true),
+    buildApproveStep(token0.address, token0.symbol, nftManagerAddress, maxUint256, true, amount0),
+    buildApproveStep(token1.address, token1.symbol, nftManagerAddress, maxUint256, true, amount1),
     {
       to: nftManagerAddress,
       data: mintData,

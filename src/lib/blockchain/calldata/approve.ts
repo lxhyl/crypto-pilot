@@ -43,6 +43,9 @@ export function generateApproveCalldata(
 /**
  * Build a single approve step. Reused by other generators
  * to prepend approval when needed.
+ *
+ * @param minRequired - The minimum allowance the subsequent operation needs.
+ *   If the user's on-chain allowance >= minRequired, this step is skipped at runtime.
  */
 export function buildApproveStep(
   tokenAddress: `0x${string}`,
@@ -50,6 +53,7 @@ export function buildApproveStep(
   spender: `0x${string}`,
   amount: bigint,
   isMax: boolean,
+  minRequired?: bigint,
 ): TransactionStep {
   const data = encodeFunctionData({
     abi: erc20Abi,
@@ -62,5 +66,10 @@ export function buildApproveStep(
     data,
     value: '0',
     label: `Approve ${isMax ? '' : 'spending '}${tokenSymbol}${isMax ? '' : ''}`,
+    approveCheck: {
+      token: tokenAddress,
+      spender,
+      minAmount: (minRequired ?? amount).toString(),
+    },
   };
 }

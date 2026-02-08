@@ -11,6 +11,7 @@ interface ChatInputProps {
 export function ChatInput({ onSend, disabled }: ChatInputProps) {
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isComposingRef = useRef(false);
 
   const handleSubmit = useCallback(() => {
     const trimmed = input.trim();
@@ -23,7 +24,7 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   }, [input, disabled, onSend]);
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey && !isComposingRef.current) {
       e.preventDefault();
       handleSubmit();
     }
@@ -47,6 +48,8 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
             value={input}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
+            onCompositionStart={() => { isComposingRef.current = true; }}
+            onCompositionEnd={() => { isComposingRef.current = false; }}
             placeholder="Describe what you want to do..."
             disabled={disabled}
             rows={1}

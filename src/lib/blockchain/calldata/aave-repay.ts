@@ -30,7 +30,7 @@ export function generateAaveRepayCalldata(
 
   const steps: TransactionStep[] = [
     // Step 1: Approve Aave Pool to spend tokens for repayment
-    buildApproveStep(token.address, token.symbol, poolAddress, maxUint256, true),
+    buildApproveStep(token.address, token.symbol, poolAddress, maxUint256, true, amount),
     // Step 2: Repay to Aave
     {
       to: poolAddress,
