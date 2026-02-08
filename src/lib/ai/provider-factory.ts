@@ -14,11 +14,13 @@ export function createAIProvider(): AIProviderInterface {
 
   if (provider === 'openai') {
     const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) throw new Error('OPENAI_API_KEY is not set');
-    return new OpenAIProvider(apiKey);
+    if (!apiKey) throw new Error('OPENAI_API_KEY is not set. Set it in .env.local');
+    const baseURL = process.env.OPENAI_BASE_URL; // e.g., https://openrouter.ai/api/v1
+    const model = process.env.OPENAI_MODEL; // e.g., anthropic/claude-sonnet-4
+    return new OpenAIProvider(apiKey, baseURL, model);
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set');
+  if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not set. Set it in .env.local');
   return new AnthropicProvider(apiKey);
 }

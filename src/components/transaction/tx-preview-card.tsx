@@ -1,7 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { AlertTriangle, CheckCircle, XCircle, Loader2, ExternalLink } from 'lucide-react';
+import {
+  AlertTriangle, CheckCircle, XCircle, Loader2, ExternalLink,
+  ArrowRightLeft, Send, ShieldCheck, PiggyBank, Landmark, Undo2, ArrowDownToLine,
+} from 'lucide-react';
 import { TxStatusBadge } from './tx-status-badge';
 import { CalldataDisplay } from './calldata-display';
 import { getExplorerUrl } from '@/lib/utils';
@@ -15,20 +18,22 @@ interface TxPreviewCardProps {
   status: 'idle' | 'pending' | 'confirmed' | 'failed' | 'rejected';
 }
 
-const intentIcons: Record<string, string> = {
-  swap: 'Swap',
-  transfer: 'Send',
-  approve: 'Approve',
-  supply_aave: 'Supply',
-  borrow_aave: 'Borrow',
-  repay_aave: 'Repay',
-  withdraw_aave: 'Withdraw',
+const intentConfig: Record<string, { icon: React.ElementType; label: string; color: string }> = {
+  swap:          { icon: ArrowRightLeft, label: 'Swap',     color: 'text-blue-400 bg-blue-500/10 ring-blue-500/20' },
+  transfer:      { icon: Send,          label: 'Transfer', color: 'text-amber-400 bg-amber-500/10 ring-amber-500/20' },
+  approve:       { icon: ShieldCheck,   label: 'Approve',  color: 'text-cyan-400 bg-cyan-500/10 ring-cyan-500/20' },
+  supply_aave:   { icon: PiggyBank,     label: 'Supply',   color: 'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20' },
+  borrow_aave:   { icon: Landmark,      label: 'Borrow',   color: 'text-rose-400 bg-rose-500/10 ring-rose-500/20' },
+  repay_aave:    { icon: Undo2,         label: 'Repay',    color: 'text-teal-400 bg-teal-500/10 ring-teal-500/20' },
+  withdraw_aave: { icon: ArrowDownToLine, label: 'Withdraw', color: 'text-orange-400 bg-orange-500/10 ring-orange-500/20' },
 };
 
 export function TxPreviewCard({ transaction, onConfirm, onReject, txHash, status }: TxPreviewCardProps) {
   const { humanReadable } = transaction;
   const [confirming, setConfirming] = useState(false);
   const isActionable = status === 'idle';
+  const config = intentConfig[humanReadable.type] || intentConfig.swap;
+  const Icon = config.icon;
 
   const handleConfirm = () => {
     setConfirming(true);
@@ -36,36 +41,34 @@ export function TxPreviewCard({ transaction, onConfirm, onReject, txHash, status
   };
 
   return (
-    <div className="mt-3 p-4 bg-gray-900/80 border border-gray-700 rounded-xl">
+    <div className="mt-4 p-4 bg-white/[0.03] border border-white/10 rounded-2xl glow-violet">
       {/* Header */}
-      <div className="flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <span className="px-2 py-0.5 bg-violet-600/20 text-violet-300 text-xs font-medium rounded">
-            {intentIcons[humanReadable.type] || humanReadable.type}
-          </span>
-          <TxStatusBadge status={status} />
+      <div className="flex items-center gap-3 mb-4">
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ring-1 ${config.color}`}>
+          <Icon className="w-4 h-4" />
         </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-white truncate">{humanReadable.summary}</p>
+        </div>
+        <TxStatusBadge status={status} />
       </div>
 
-      {/* Summary */}
-      <p className="text-sm font-medium text-white mb-3">{humanReadable.summary}</p>
-
-      {/* Details */}
-      <div className="space-y-1.5 mb-3">
+      {/* Details table */}
+      <div className="rounded-xl bg-black/20 border border-white/5 divide-y divide-white/5 mb-4 overflow-hidden">
         {humanReadable.details.map((detail, i) => (
-          <div key={i} className="flex items-center justify-between text-xs">
-            <span className="text-gray-400">{detail.label}</span>
-            <span className="text-gray-200 font-mono">{detail.value}</span>
+          <div key={i} className="flex items-center justify-between px-3.5 py-2.5 text-xs">
+            <span className="text-gray-500">{detail.label}</span>
+            <span className="text-gray-200 font-mono text-right max-w-[60%] truncate">{detail.value}</span>
           </div>
         ))}
       </div>
 
       {/* Warnings */}
       {humanReadable.warnings.length > 0 && (
-        <div className="mb-3 space-y-1">
+        <div className="mb-4 space-y-2">
           {humanReadable.warnings.map((warning, i) => (
-            <div key={i} className="flex items-start gap-2 text-xs text-yellow-400 bg-yellow-900/20 p-2 rounded">
-              <AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0" />
+            <div key={i} className="flex items-start gap-2.5 text-xs text-yellow-300/90 bg-yellow-500/5 border border-yellow-500/10 p-3 rounded-xl" role="alert">
+              <AlertTriangle className="w-3.5 h-3.5 mt-0.5 flex-shrink-0" aria-hidden="true" />
               <span>{warning}</span>
             </div>
           ))}
@@ -77,24 +80,25 @@ export function TxPreviewCard({ transaction, onConfirm, onReject, txHash, status
 
       {/* Actions */}
       {isActionable && (
-        <div className="flex gap-2 mt-4">
+        <div className="flex gap-2.5 mt-4">
           <button
             onClick={handleConfirm}
             disabled={confirming}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-violet-600 hover:bg-violet-500 disabled:bg-violet-800 text-white text-sm font-medium rounded-lg transition-colors"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 disabled:from-violet-800 disabled:to-violet-800 text-white text-sm font-semibold rounded-xl shadow-lg shadow-violet-500/20 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
           >
             {confirming ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin" aria-hidden="true" />
             ) : (
-              <CheckCircle className="w-4 h-4" />
+              <CheckCircle className="w-4 h-4" aria-hidden="true" />
             )}
-            {confirming ? 'Waiting for wallet...' : 'Confirm Transaction'}
+            {confirming ? 'Waiting for wallet\u2026' : 'Confirm'}
           </button>
           <button
             onClick={onReject}
-            className="px-4 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 text-sm font-medium rounded-lg transition-colors"
+            aria-label="Reject transaction"
+            className="px-4 py-3 bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white text-sm font-medium rounded-xl border border-white/5 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 focus-visible:ring-offset-2 focus-visible:ring-offset-gray-900"
           >
-            <XCircle className="w-4 h-4" />
+            <XCircle className="w-4 h-4" aria-hidden="true" />
           </button>
         </div>
       )}
@@ -106,12 +110,14 @@ export function TxPreviewCard({ transaction, onConfirm, onReject, txHash, status
             href={getExplorerUrl(transaction.chainId, txHash)}
             target="_blank"
             rel="noopener noreferrer"
-            className="flex items-center gap-1 text-xs text-violet-400 hover:text-violet-300 transition-colors"
+            className="inline-flex items-center gap-1.5 text-xs text-violet-400 hover:text-violet-300 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-400 rounded"
           >
             View on Explorer
-            <ExternalLink className="w-3 h-3" />
+            <ExternalLink className="w-3 h-3" aria-hidden="true" />
           </a>
-          <span className="text-xs text-gray-500 font-mono">{txHash.slice(0, 10)}...{txHash.slice(-8)}</span>
+          <span className="text-[10px] text-gray-600 font-mono">
+            {txHash.slice(0, 10)}&hellip;{txHash.slice(-8)}
+          </span>
         </div>
       )}
     </div>

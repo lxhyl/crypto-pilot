@@ -14,9 +14,9 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-gray-950">
       <Header />
-      <div className="flex flex-1 overflow-hidden">
+      <main className="flex flex-1 overflow-hidden">
         <ChatContainer
           className="flex-1"
           onOperationAdded={handleOperationAdded}
@@ -25,7 +25,7 @@ export default function Home() {
           className="w-80 hidden lg:flex"
           operations={operations}
         />
-      </div>
+      </main>
     </div>
   );
 }

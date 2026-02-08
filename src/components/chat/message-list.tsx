@@ -3,12 +3,13 @@
 import { useEffect, useRef } from 'react';
 import { MessageBubble } from './message-bubble';
 import { ThinkingIndicator } from './thinking-indicator';
+import { ArrowRightLeft, PiggyBank, Send, Landmark, Compass } from 'lucide-react';
 import type { ChatMessage } from '@/types';
 
 interface MessageListProps {
   messages: ChatMessage[];
   isLoading: boolean;
-  // Transaction handling for the latest message with a transaction
+  onSendExample?: (text: string) => void;
   onConfirmTx?: () => void;
   onRejectTx?: () => void;
   txHash?: string;
@@ -16,9 +17,17 @@ interface MessageListProps {
   activeTxMessageId?: string;
 }
 
+const EXAMPLES = [
+  { icon: ArrowRightLeft, text: 'Swap 1 ETH for USDC', color: 'text-blue-400 bg-blue-500/10 ring-blue-500/20' },
+  { icon: PiggyBank, text: 'Supply 100 USDC to Aave', color: 'text-emerald-400 bg-emerald-500/10 ring-emerald-500/20' },
+  { icon: Send, text: 'Transfer 0.5 ETH to 0x\u2026', color: 'text-amber-400 bg-amber-500/10 ring-amber-500/20' },
+  { icon: Landmark, text: 'Borrow 50 DAI from Aave', color: 'text-rose-400 bg-rose-500/10 ring-rose-500/20' },
+];
+
 export function MessageList({
   messages,
   isLoading,
+  onSendExample,
   onConfirmTx,
   onRejectTx,
   txHash,
@@ -33,28 +42,35 @@ export function MessageList({
 
   if (messages.length === 0 && !isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="text-center max-w-md">
-          <div className="w-16 h-16 rounded-2xl bg-violet-600/10 flex items-center justify-center mx-auto mb-4">
-            <span className="text-3xl">🧭</span>
+      <div className="flex-1 flex items-center justify-center p-8 bg-grid">
+        <div className="text-center max-w-lg">
+          {/* Logo */}
+          <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-violet-500/30">
+            <Compass className="w-10 h-10 text-white" />
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">Welcome to Crypto Pilot</h2>
-          <p className="text-sm text-gray-400 mb-6">
-            Tell me what you want to do with your crypto assets. I can help you swap tokens, lend on Aave, transfer tokens, and more.
+
+          <h2 className="text-2xl font-bold text-white mb-2" style={{ textWrap: 'balance' }}>
+            What would you like to do?
+          </h2>
+          <p className="text-sm text-gray-400 mb-8 max-w-sm mx-auto" style={{ textWrap: 'balance' }}>
+            Describe any DeFi operation in plain language. I&apos;ll prepare the transaction for you to review and sign.
           </p>
-          <div className="grid grid-cols-1 gap-2 text-left">
-            {[
-              'Swap 1 ETH for USDC',
-              'Supply 100 USDC to Aave',
-              'Transfer 0.5 ETH to 0x...',
-              'Borrow 50 DAI from Aave',
-            ].map((example) => (
-              <div
-                key={example}
-                className="px-3 py-2 bg-gray-900/50 border border-gray-800 rounded-lg text-xs text-gray-400"
+
+          {/* Example cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+            {EXAMPLES.map(({ icon: Icon, text, color }) => (
+              <button
+                key={text}
+                onClick={() => onSendExample?.(text)}
+                className="group flex items-center gap-3 px-4 py-3 bg-white/[0.03] hover:bg-white/[0.06] border border-white/5 hover:border-white/10 rounded-xl transition-all cursor-pointer"
               >
-                &quot;{example}&quot;
-              </div>
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center ring-1 flex-shrink-0 ${color}`}>
+                  <Icon className="w-4 h-4" />
+                </div>
+                <span className="text-sm text-gray-300 group-hover:text-white transition-colors truncate">
+                  {text}
+                </span>
+              </button>
             ))}
           </div>
         </div>
@@ -64,7 +80,7 @@ export function MessageList({
 
   return (
     <div className="flex-1 overflow-y-auto">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-3xl mx-auto divide-y divide-white/[0.03]">
         {messages.map((msg) => (
           <MessageBubble
             key={msg.id}

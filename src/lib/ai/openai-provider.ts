@@ -5,9 +5,15 @@ import type { ChatMessage, AIResponse, ToolCallResult } from '@/types';
 
 export class OpenAIProvider {
   private client: OpenAI;
+  private model: string;
 
-  constructor(apiKey: string) {
-    this.client = new OpenAI({ apiKey });
+  constructor(apiKey: string, baseURL?: string, model?: string) {
+    this.client = new OpenAI({
+      apiKey,
+      ...(baseURL ? { baseURL } : {}),
+    });
+    // Default model: use Claude on OpenRouter, or GPT-4o for native OpenAI
+    this.model = model || (baseURL?.includes('openrouter') ? 'anthropic/claude-sonnet-4' : 'gpt-4o');
   }
 
   async chat(
@@ -24,7 +30,7 @@ export class OpenAIProvider {
     ];
 
     const response = await this.client.chat.completions.create({
-      model: 'gpt-4o',
+      model: this.model,
       messages: openaiMessages,
       tools: toOpenAIFunctions().map((fn) => ({
         type: 'function' as const,
