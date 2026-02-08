@@ -4,22 +4,19 @@ import { cn } from '@/lib/utils';
 
 type Status = 'pending' | 'confirmed' | 'failed' | 'rejected' | 'idle';
 
-const statusConfig: Record<Status, { label: string; dot: string; className: string }> = {
-  idle:      { label: 'Ready',       dot: 'bg-gray-400',   className: 'bg-gray-800/50 text-gray-400 ring-gray-700/50' },
-  pending:   { label: 'Pending\u2026', dot: 'bg-yellow-400 animate-pulse', className: 'bg-yellow-900/20 text-yellow-300 ring-yellow-500/20' },
-  confirmed: { label: 'Confirmed',   dot: 'bg-green-400',  className: 'bg-green-900/20 text-green-300 ring-green-500/20' },
-  failed:    { label: 'Failed',      dot: 'bg-red-400',    className: 'bg-red-900/20 text-red-300 ring-red-500/20' },
-  rejected:  { label: 'Rejected',    dot: 'bg-gray-500',   className: 'bg-gray-800/50 text-gray-500 ring-gray-700/50' },
+const statusConfig: Record<Status, { label: string; dot: string; bg: string }> = {
+  idle:      { label: 'Review',     dot: 'bg-violet-400',                    bg: 'bg-violet-500/8 text-violet-400 border-violet-500/15' },
+  pending:   { label: 'Pending',    dot: 'bg-amber-400 animate-pulse',       bg: 'bg-amber-500/8 text-amber-400 border-amber-500/15' },
+  confirmed: { label: 'Confirmed',  dot: 'bg-emerald-400',                   bg: 'bg-emerald-500/8 text-emerald-400 border-emerald-500/15' },
+  failed:    { label: 'Failed',     dot: 'bg-red-400',                       bg: 'bg-red-500/8 text-red-400 border-red-500/15' },
+  rejected:  { label: 'Cancelled',  dot: 'bg-zinc-500',                      bg: 'bg-zinc-500/8 text-zinc-500 border-zinc-500/15' },
 };
 
 export function TxStatusBadge({ status }: { status: Status }) {
   const config = statusConfig[status] || statusConfig.idle;
   return (
     <span
-      className={cn(
-        'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-medium ring-1',
-        config.className,
-      )}
+      className={cn('inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[10px] font-medium border', config.bg)}
       role="status"
     >
       <span className={cn('w-1.5 h-1.5 rounded-full', config.dot)} aria-hidden="true" />

@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Crypto Pilot - AI Blockchain Assistant",
-  description: "Natural language interface for blockchain operations. Swap, lend, borrow, and transfer crypto assets with AI.",
+  title: "Crypto Pilot",
+  description: "AI-powered DeFi operations in plain language",
 };
 
 export default function RootLayout({
@@ -25,9 +25,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased bg-gray-950 text-gray-100`}
-      >
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <AppProviders>{children}</AppProviders>
       </body>
     </html>

@@ -1,28 +1,26 @@
 'use client';
 
 import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { Compass } from 'lucide-react';
+import { Zap } from 'lucide-react';
 
 export function Header() {
   return (
-    <header className="glass flex items-center justify-between px-6 py-3.5 border-b border-white/5 sticky top-0 z-50">
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center shadow-lg shadow-violet-500/20">
-          <Compass className="w-5 h-5 text-white" />
+    <header className="flex items-center justify-between px-5 py-3 border-b border-[var(--border)] bg-[var(--background)]/80 backdrop-blur-xl sticky top-0 z-50">
+      <div className="flex items-center gap-2.5">
+        <div className="relative">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center">
+            <Zap className="w-4 h-4 text-white" strokeWidth={2.5} />
+          </div>
+          <div className="absolute -inset-1 rounded-xl bg-gradient-to-br from-violet-500/20 to-indigo-600/20 blur-sm -z-10" />
         </div>
-        <div>
-          <h1 className="text-base font-bold text-white leading-none tracking-tight" style={{ textWrap: 'balance' }}>
-            Crypto Pilot
-          </h1>
-          <p className="text-[11px] text-gray-500 mt-0.5">
-            Natural language DeFi
-          </p>
-        </div>
+        <span className="text-[15px] font-semibold text-white tracking-tight">
+          Crypto Pilot
+        </span>
       </div>
       <ConnectButton
         showBalance={false}
         chainStatus="icon"
-        accountStatus="address"
+        accountStatus={{ smallScreen: 'avatar', largeScreen: 'address' }}
       />
     </header>
   );

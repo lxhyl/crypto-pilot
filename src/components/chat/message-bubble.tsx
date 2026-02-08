@@ -22,45 +22,59 @@ export function MessageBubble({
   const isUser = message.role === 'user';
 
   return (
-    <div className={`flex items-start gap-3 px-6 py-4 transition-colors ${isUser ? '' : 'bg-white/[0.02]'}`}>
-      {/* Avatar */}
-      <div
-        className={`w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 ring-1 ${
-          isUser
-            ? 'bg-blue-500/10 text-blue-400 ring-blue-500/20'
-            : 'bg-gradient-to-br from-violet-500/20 to-violet-700/20 text-violet-400 ring-violet-500/10'
-        }`}
-      >
-        {isUser ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1.5">
-          <p className="text-xs font-semibold text-gray-300">
-            {isUser ? 'You' : 'Crypto Pilot'}
-          </p>
-          <time className="text-[10px] text-gray-600" dateTime={new Date(message.timestamp).toISOString()}>
-            {new Date(message.timestamp).toLocaleTimeString([], {
-              hour: '2-digit',
-              minute: '2-digit',
-            })}
-          </time>
-        </div>
-        <div className="text-[13px] leading-relaxed text-gray-300 whitespace-pre-wrap break-words">
-          {message.content}
+    <div className="px-4 sm:px-6 py-3">
+      <div className={`flex gap-3 ${isUser ? 'flex-row-reverse' : ''}`}>
+        {/* Avatar */}
+        <div
+          className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${
+            isUser
+              ? 'bg-zinc-800 text-zinc-400'
+              : 'bg-gradient-to-br from-violet-500/20 to-indigo-500/20 text-violet-400 ring-1 ring-violet-500/10'
+          }`}
+        >
+          {isUser ? <User className="w-3.5 h-3.5" /> : <Bot className="w-3.5 h-3.5" />}
         </div>
 
-        {/* Transaction preview */}
-        {message.transaction && onConfirmTx && onRejectTx && (
-          <TxPreviewCard
-            transaction={message.transaction}
-            onConfirm={onConfirmTx}
-            onReject={onRejectTx}
-            txHash={txHash}
-            status={txStatus}
-          />
-        )}
+        {/* Content */}
+        <div className={`max-w-[85%] min-w-0 ${isUser ? 'text-right' : ''}`}>
+          <div
+            className={`inline-block text-[13px] leading-relaxed rounded-2xl px-4 py-2.5 ${
+              isUser
+                ? 'bg-violet-600 text-white rounded-tr-md'
+                : 'bg-[var(--surface)] text-zinc-300 rounded-tl-md border border-[var(--border)]'
+            }`}
+          >
+            <div className="whitespace-pre-wrap break-words text-left">
+              {message.content}
+            </div>
+          </div>
+
+          {/* Timestamp */}
+          <div className={`mt-1 ${isUser ? 'text-right' : 'text-left'}`}>
+            <time
+              className="text-[10px] text-zinc-600"
+              dateTime={new Date(message.timestamp).toISOString()}
+            >
+              {new Date(message.timestamp).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
+            </time>
+          </div>
+
+          {/* Transaction preview */}
+          {message.transaction && onConfirmTx && onRejectTx && (
+            <div className="mt-2 text-left">
+              <TxPreviewCard
+                transaction={message.transaction}
+                onConfirm={onConfirmTx}
+                onReject={onRejectTx}
+                txHash={txHash}
+                status={txStatus}
+              />
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

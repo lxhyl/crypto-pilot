@@ -14,7 +14,7 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-950">
+    <div className="flex flex-col h-screen bg-[var(--background)] bg-mesh">
       <Header />
       <main className="flex flex-1 overflow-hidden">
         <ChatContainer
@@ -22,7 +22,7 @@ export default function Home() {
           onOperationAdded={handleOperationAdded}
         />
         <OperationHistory
-          className="w-80 hidden lg:flex"
+          className="w-[320px] hidden lg:flex"
           operations={operations}
         />
       </main>

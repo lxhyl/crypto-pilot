@@ -39,36 +39,42 @@ export function ChatInput({ onSend, disabled }: ChatInputProps) {
   const hasInput = input.trim().length > 0;
 
   return (
-    <div className="p-4 border-t border-white/5 glass">
-      <div className="flex items-end gap-3 max-w-3xl mx-auto">
-        <div className="relative flex-1">
+    <div className="px-4 pb-4 pt-2">
+      <div className="max-w-3xl mx-auto">
+        <div className="relative flex items-end bg-[var(--surface)] border border-[var(--border)] hover:border-[var(--border-hover)] rounded-2xl transition-colors focus-within:border-violet-500/30 focus-within:shadow-[0_0_0_1px_rgba(139,92,246,0.15)]">
           <textarea
             ref={textareaRef}
             value={input}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
-            placeholder="Tell me what you want to do&hellip;"
+            placeholder="Describe what you want to do..."
             disabled={disabled}
             rows={1}
-            className="w-full resize-none bg-gray-900/80 border border-white/10 rounded-2xl px-4 py-3 pr-12 text-sm text-white placeholder-gray-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:border-transparent disabled:opacity-40 disabled:cursor-not-allowed transition-shadow"
+            className="flex-1 resize-none bg-transparent px-4 py-3.5 text-[13px] text-white placeholder-zinc-500 focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed min-h-[48px] max-h-[150px]"
           />
-          <button
-            onClick={handleSubmit}
-            disabled={disabled || !hasInput}
-            aria-label="Send message"
-            className={`absolute right-2 bottom-2 p-1.5 rounded-lg transition-all ${
-              hasInput && !disabled
-                ? 'bg-violet-600 text-white hover:bg-violet-500 shadow-lg shadow-violet-500/25'
-                : 'bg-gray-800 text-gray-600'
-            } disabled:cursor-not-allowed`}
-          >
-            <ArrowUp className="w-4 h-4" strokeWidth={2.5} />
-          </button>
+          <div className="p-2 flex-shrink-0">
+            <button
+              onClick={handleSubmit}
+              disabled={disabled || !hasInput}
+              aria-label="Send message"
+              className={`w-8 h-8 rounded-xl flex items-center justify-center transition-all duration-200 ${
+                hasInput && !disabled
+                  ? 'bg-violet-600 text-white hover:bg-violet-500 shadow-lg shadow-violet-500/20 scale-100'
+                  : 'bg-zinc-800 text-zinc-600 scale-95'
+              } disabled:cursor-not-allowed`}
+            >
+              <ArrowUp className="w-4 h-4" strokeWidth={2.5} />
+            </button>
+          </div>
         </div>
+        <p className="text-center text-[11px] text-zinc-600 mt-2 select-none">
+          <kbd className="px-1.5 py-0.5 bg-zinc-800/50 rounded text-[10px] text-zinc-500 font-mono">Enter</kbd>
+          {' '}to send{' '}
+          <span className="text-zinc-700">&middot;</span>
+          {' '}<kbd className="px-1.5 py-0.5 bg-zinc-800/50 rounded text-[10px] text-zinc-500 font-mono">Shift+Enter</kbd>
+          {' '}new line
+        </p>
       </div>
-      <p className="text-center text-[11px] text-gray-600 mt-2 select-none">
-        Enter to send &middot; Shift+Enter for new line
-      </p>
     </div>
   );
 }
